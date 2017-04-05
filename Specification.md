@@ -2,6 +2,16 @@
 
 *How should I write a specification document for programming languages?*
 
+# Syntax
+
+*TODO: How to write this section well?*
+
+YatScript uses C-like syntax.
+
+* Every statement ends with a semicolon(`;`).
+* Block uses curly braces(`{ and }`).
+* `//` for line comment, `/* */` for block comment.
+
 # Primitives
 
 ## Boolean
@@ -22,7 +32,7 @@ Numbers are transpiled into `{type}.const`. Types are automatically determined b
 
 ## String
 
-*TODO*
+*TODO: I think string won't be used*
 
 # Variables
 
@@ -132,13 +142,14 @@ $v_i32_3 = $v_i64_1 + $v_i32_2;
 
 *TODO: explicit casting*
 
-# Operator
+# Operators
 
 ## Assignation
 
 * Assignation (`$a = $b`)
   * If `$a` and `$b` is same type, no type casting occurs
   * If `$a` and `$b` is different type, `$b` will be casted to `$a`'s type
+  * Assignation to immutable global variable, or primitives are not allowed.
 
 ## Arithmetic
 
@@ -155,28 +166,140 @@ $v_i32_3 = $v_i64_1 + $v_i32_2;
 
 Bitwise operations will work with only integer operands.
 
-* NOT (`~$a`)
+* Bitwise NOT (`~$a`)
   * Will be transpiled into `$a ^ 0xffffffff` (`0xffffffffffffffff` for `i64` and `u64`)
-* AND (`$a & $b`)
-* XOR (`$a ^ $b`)
-* OR (`$a | $b`)
-* Left shift (`$a << $b`)
+* Bitwise AND (`$a & $b`)
+* Bitwise XOR (`$a ^ $b`)
+* Bitwise OR (`$a | $b`)
+* Bitwise left shift (`$a << $b`)
   * Right operand should not be less than zero
-* Right shift (`$a << $b`)
+* Bitwise right shift (`$a << $b`)
   * Operation's signedness will follow left operand's signedness
     * If left operand is a primitive integer, positive number will be treated as unsigned, negative number will be treated as signed
     * *TODO: unsigned shift for negative number?*
   * Right operand should not be less than zero
-* Left rotate (`$a <<< $b`)
+* Bitwise left rotate (`$a <<< $b`)
   * Right operand should not be less than zero
   * *TODO: should I use <<<?*
-* Right rotate (`$a >>> $b`)
+* Bitwise right rotate (`$a >>> $b`)
   * Right operand should not be less than zero
   * *TODO: should I use >>>?*
 
-## Logical
+## Relational, Logical
+
+Results of relational operators and logical operators are `0` for false, `1` for true in `i32` type.
+
+* Logical NOT (`!$a`)
+* Less than (`$a < $b`)
+* Less than or equal to (`$a <= $b`)
+* Greater than (`$a > $b`)
+* Greater than or equal to (`$a > $b`)
+* Equal to (`$a == $b`)
+* Not equal to (`$a != $b`)
+* Logical AND (`$a && $b`)
+* Logical OR (`$a || $b`)
+
+Operand of logical operators are implicitly casted into `i32 0` or `i32 1`.
+* If operand has a value of `i32/i64 0` or `f32/f64 0.0`, value is casted into `i32 0`
+* Otherwise, value is casted into `i32 1`
 
 ## Precedence
+
+1. Logical NOT, Bitwise NOT
+2. Multiplication, Division, Remainder
+3. Addition, Subtraction
+4. Bitwise shift, Bitwise rotate
+5. Less than, Less than or equal to, Greater than, Greater than or equal to
+6. Equal to, Not equal to
+7. Bitwise AND
+8. Bitwise XOR
+9. Bitwise OR
+10. Logical AND
+11. Logical OR
+12. Assignation
+
+# Control structures
+
+## Conditional statement (`if` statement)
+
+`if` statement takes one expression for condition, one block to be executed when the condition is true, and optional `else` keyword and a block to be executed when the condition is false.
+
+When a block has only one statement, wrapping curly braces are optional.
+
+```
+===[ if.yat ]===
+if ($a == 1)
+  $b = 1;
+
+if ($b == 1) {
+  $c = 1;
+}
+else {
+  $c = 2;
+  $d = 3;
+}
+
+===[ if.wat ]===
+(if
+  (i32.eq (get_local $a) (i32.const 1))
+  (set_local $b (i32.const 1))
+)
+(if
+  (i32.eq (get_local $b) (i32.const 1))
+  (set_local $c (i32.const 1))
+  (block
+    (set_local $c (i32.const 2))
+    (set_local $d (i32.const 3))
+  )
+)
+```
+
+## Iteration statement (`while` statement)
+
+`while` statement takes one expression for condition, one block to be executed repeatedly until the condition is false or the `break` statement.
+
+If condition is a primitive `1`, transpiler will optimize `while` loop as an infinite loop.
+
+```
+===[ while.yat ]===
+while ($a < 10) {
+  $b = $b + $a;
+  $a = $a + 1;
+}
+
+while (1) {
+  $c = $c + 1;
+
+  if ($c == 10) break;
+}
+
+===[ while.wat ]===
+(block $0
+  (loop $1
+    ;; if ($a < 10) is false, escape loop
+    (br_if $0
+      (i32.eq
+        (i32.lt (get_local $a) (i32.const 10))
+        (i32.const 0)
+      )
+    )
+    (set_local $b (i32.add (get_local $b) (get_local $a)))
+    (set_local $a (i32.add (get_local $a) (i32.const 1)))
+    (br $1)
+  )
+)
+
+(block $2
+  (loop $3
+    ;; condition is optimized
+    (set_local $c (i32.add (get_local $c) (i32.const 1)))
+    (if (i32.eq (get_local $c) (i32.const)) (br $2))
+    (br $3)
+  )
+)
+```
+
+# Functions
 
 # Module
 
